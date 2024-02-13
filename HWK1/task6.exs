@@ -1,14 +1,16 @@
 defmodule TopSecret do
+  alias Macro, as: M
+
   def to_ast(string) do
     Code.string_to_quoted!(string)
   end
-  def decode_secret_message_part({op, _, args} = ast, acc) when op in [:def, :defp] do
+  def decode_secret_message_section({op, _, args} = ast, acc) when op in [:def, :defp] do
     {function_name, function_args} = get_function_name_and_args(args)
     arity = length(function_args)
     message = String.slice(to_string(function_name), 0, arity)
     {ast, [message | acc]}
   end
-  def decode_secret_message_part(ast, acc) do
+  def decode_secret_message_section(ast, acc) do
     {ast, acc}
   end
   defp get_function_name_and_args(def_args) do
@@ -20,7 +22,7 @@ defmodule TopSecret do
   end
   def decode_secret_message(string) do
     ast = to_ast(string)
-    {_, acc} = Macro.prewalk(ast, [], &decode_secret_message_part/2)
+    {_, acc} = M.prewalk(ast, [], &decode_secret_message_section/2)
     acc
     |> Enum.reverse()
     |> Enum.join("")
